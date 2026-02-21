@@ -144,7 +144,13 @@ export default function InterviewRoom({
           )}
         </div>
       </header>
-      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
+      <style>{`
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes agent-speak-bar {
+          0%, 100% { transform: scaleY(0.4); }
+          50% { transform: scaleY(1); }
+        }
+      `}</style>
 
       {/* Main: two columns */}
       <div className="interview-room-grid" style={{
@@ -233,6 +239,32 @@ export default function InterviewRoom({
               {status === 'listening' && 'Speak your answer now'}
               {status === 'done' && 'Interview complete'}
             </p>
+            {status === 'agent_speaking' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                marginBottom: 16,
+                height: 32,
+              }}>
+                <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>AI is speaking</span>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: 5,
+                      height: 24,
+                      background: '#0f172a',
+                      borderRadius: 3,
+                      transformOrigin: 'center bottom',
+                      animation: 'agent-speak-bar 0.8s ease-in-out infinite',
+                      animationDelay: `${i * 0.12}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
             <div style={{
               width: 72,
               height: 72,
