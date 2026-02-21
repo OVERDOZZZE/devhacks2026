@@ -158,7 +158,7 @@ export default function Dashboard() {
                     {interview.agent?.name || 'Unknown Agent'}
                   </strong>
                   <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: 14 }}>
-                    {interview.number_of_questions} questions · {interview.status}
+                    {interview.number_of_questions} questions Â· {interview.status}
                   </p>
                   <p style={{ margin: '2px 0 0', color: '#9ca3af', fontSize: 13 }}>
                     {new Date(interview.created_at).toLocaleDateString()}
