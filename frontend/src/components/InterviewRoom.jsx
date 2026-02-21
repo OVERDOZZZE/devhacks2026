@@ -120,7 +120,7 @@ export default function InterviewRoom({
         flexWrap: 'wrap',
         gap: 12,
       }}>
-        <div style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 18 }}>InterviewAI•</div>
+        <div style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 18 }}>Preply</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, justifyContent: 'center', minWidth: 0 }}>
           <span style={{ fontSize: 14, fontWeight: 500 }}>{headerRole}</span>
           {companyName && (

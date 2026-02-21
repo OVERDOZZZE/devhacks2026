@@ -1,10 +1,97 @@
-import { useEffect, useState, useRef } from 'react' 
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
 import client from '../api/client'
 import InterviewRoom from '../components/InterviewRoom'
 
 const LIVEKIT_URL = 'wss://interview-ai-agent-axxmcvn3.livekit.cloud'
+
+const headingFont = "'DM Sans', sans-serif"
+
+function SessionLoadingScreen({ message }) {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#f8fafc',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    }}>
+      <style>{`
+        @keyframes session-spin { to { transform: rotate(360deg); } }
+        @keyframes session-pulse { 0%, 100% { opacity: 0.4; transform: scale(0.92); } 50% { opacity: 0.9; transform: scale(1); } }
+        @keyframes session-dot { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+      `}</style>
+      <div style={{ position: 'relative', width: 80, height: 80 }}>
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          border: '2px solid #e2e8f0',
+          borderRadius: '50%',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          border: '2px solid transparent',
+          borderTopColor: '#0f172a',
+          borderRadius: '50%',
+          animation: 'session-spin 1s linear infinite',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: 8,
+          border: '2px solid transparent',
+          borderRightColor: 'rgba(15,23,42,0.6)',
+          borderRadius: '50%',
+          animation: 'session-spin 0.8s linear infinite reverse',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'session-pulse 2s ease-in-out infinite',
+        }}>
+          <div style={{
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: '#0f172a',
+            boxShadow: '0 0 20px rgba(15,23,42,0.25)',
+          }} />
+        </div>
+      </div>
+      <p style={{
+        marginTop: 28,
+        fontSize: 16,
+        fontWeight: 600,
+        fontFamily: headingFont,
+        color: '#0f172a',
+        letterSpacing: '0.02em',
+      }}>
+        {message}
+      </p>
+      <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#64748b',
+              animation: 'session-dot 1.2s ease-in-out infinite',
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function Session() {
   const { id } = useParams()
@@ -61,8 +148,8 @@ export default function Session() {
     }
   }
 
-  if (phase === 'loading') return <p style={{ textAlign: 'center', marginTop: 100 }}>Preparing your interview...</p>
-  if (phase === 'submitting') return <p style={{ textAlign: 'center', marginTop: 100 }}>Evaluating your performance...</p>
+  if (phase === 'loading') return <SessionLoadingScreen message="Preparing your interview..." />
+  if (phase === 'submitting') return <SessionLoadingScreen message="Evaluating your performance..." />
 
   return (
     <LiveKitRoom
@@ -87,7 +174,7 @@ export default function Session() {
               companyName={interviewMeta.companyName}
             />
           )
-        : <p style={{ textAlign: 'center', marginTop: 100 }}>Connecting to interview room...</p>
+        : <SessionLoadingScreen message="Connecting to interview room..." />
       }
     </LiveKitRoom>
   )
