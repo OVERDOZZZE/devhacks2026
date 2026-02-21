@@ -1,4 +1,7 @@
 venv/
 migrations/
 __pycache__/
-
+django.log
+.venv
+db.sqlite3
+back/django.log

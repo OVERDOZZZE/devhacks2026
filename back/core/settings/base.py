@@ -6,6 +6,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 APPS = [
     "src.user.apps.UserConfig",
+    "src.interview.apps.InterviewConfig",
 ]
 INSTALLED_LIBRARIES = [
     "rest_framework",
@@ -51,6 +52,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "core.wsgi.application"
 ROOT_URLCONF = "core.urls"
+AUTH_USER_MODEL = "user.CustomUser"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",},
@@ -65,6 +67,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / 'back' / 'staticfiles'
 
 # Logging
 LOGGING = {
@@ -110,5 +113,6 @@ cloudinary.config(
     api_key=config("CLOUDINARY_API_KEY"),
     api_secret=config("CLOUDINARY_API_SECRET"),
 )
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"

@@ -1,6 +1,6 @@
 from .base import *
 
-DEBUG = False
+DEBUG = True
 SECRET_KEY = None
 ALLOWED_HOSTS = []
 
