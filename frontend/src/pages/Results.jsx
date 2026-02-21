@@ -64,7 +64,21 @@ export default function Results() {
     <div style={{ maxWidth: 700, margin: '40px auto', padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <h1 style={{ margin: 0 }}>Interview Results</h1>
-        <button onClick={() => navigate('/dashboard')}>← Back to Dashboard</button>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            padding: '10px 20px',
+            borderRadius: 8,
+            border: 'none',
+            background: '#000',
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          ← Back to Dashboard
+        </button>
       </div>
 
       {scoring ? (

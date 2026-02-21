@@ -124,7 +124,7 @@ export default function Login() {
             disabled={loading}
             style={{
               width: '100%',
-              background: '#2563eb',
+              background: '#000',
               color: '#fff',
               border: 'none',
               padding: '12px 24px',
