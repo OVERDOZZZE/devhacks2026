@@ -1,15 +1,3 @@
-"""
-agent/service.py
-
-Two service functions covering the full interview lifecycle:
-
-  1. generate_and_save_questions  – called when the interview is started
-  2. evaluate_and_save_all        – called when the interview is completed;
-                                    receives all answers at once, scores each
-                                    Q&A, and computes the overall result in a
-                                    single LLM call.
-"""
-
 import logging
 
 from src.interview.models import Interview, InterviewQA, Question
