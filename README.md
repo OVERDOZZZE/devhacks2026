@@ -20,20 +20,20 @@ A voice-based AI interviewer asks questions in real time. After each response, s
 
 ## Tech Stack
 
-**Frontend** — React, LiveKit Components  
-**Backend** — Django REST Framework, OpenRouter LLM API  
-**Voice** — LiveKit Agents, OpenAI STT/TTS, Silero VAD  
-**Auth** — Token-based authentication
+**Frontend** - React, LiveKit Components  
+**Backend** - Django REST Framework, OpenRouter LLM API  
+**Voice** - LiveKit Agents, OpenAI STT/TTS, Silero VAD  
+**Auth** - Token-based authentication
 
 ---
 
 ## Key Features
 
-- 🎤 **Live voice interviews** — real-time speech with an AI interviewer via LiveKit
-- 🧠 **Personalized questions** — generated from job description and agent prompt
-- 📊 **Per-answer scoring** — structured feedback with a 1–10 score for each response
-- 📝 **Session summary** — overall score and feedback across all answers
-- 🔄 **Repeatable sessions** — designed for progressive improvement over time
+-  **Live voice interviews** — real-time speech with an AI interviewer via LiveKit
+-  **Personalized questions** — generated from job description and agent prompt
+-  **Per-answer scoring** — structured feedback with a 1–10 score for each response
+-  **Session summary** — overall score and feedback across all answers
+-  **Repeatable sessions** — designed for progressive improvement over time
 
 ---
 
