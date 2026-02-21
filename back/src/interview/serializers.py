@@ -33,7 +33,7 @@ class InterviewListSerializer(serializers.ModelSerializer):
             'status', 'overall_score', 'created_at', 'completed_at'
         ]
         read_only_fields = ['status', 'overall_score', 'created_at', 'completed_at']
-
+        
 
 class InterviewDetailSerializer(serializers.ModelSerializer):
     agent = AgentSerializer(read_only=True)

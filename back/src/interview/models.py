@@ -39,17 +39,20 @@ class Interview(models.Model):
         null=True,
         related_name="interviews"
     )
-    job_description = models.TextField()
-    number_of_questions = models.PositiveSmallIntegerField(choices=NumberOfQuestions)
+    job_description = models.TextField(blank=True, null=True)
+    number_of_questions = models.PositiveSmallIntegerField(
+        choices=NumberOfQuestions,
+        default=NumberOfQuestions.Q5
+    )
     status = models.CharField(max_length=20, choices=Status, default=Status.PENDING)
     overall_score = models.PositiveSmallIntegerField(blank=True, null=True)
-    overall_feedback = models.TextField()
+    overall_feedback = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.user} — Interview #{self.pk}"
+        return f"{self.user}, Interview #{self.pk}"
 
 
 class InterviewQA(models.Model):
