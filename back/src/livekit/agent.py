@@ -58,7 +58,7 @@ class InterviewAgent(Agent):
             captured["text"] = new_user_messages[-1].content if new_user_messages else ""
 
         return captured["text"]
-
+    
     async def on_enter(self):
         await asyncio.sleep(1)
 
@@ -73,9 +73,8 @@ class InterviewAgent(Agent):
 
             message_count_before = len(self.session.history.messages())
 
-            await self.session.generate_reply(
-                instructions=f"Ask the candidate this exact question: {question_text}"
-            )
+            # Speak the exact question text via TTS, no LLM rephrasing
+            await self.session.say(question_text, allow_interruptions=False)
 
             await self.room.local_participant.publish_data(
                 json.dumps({"type": "question_asked"}).encode(),
@@ -112,8 +111,7 @@ class InterviewAgent(Agent):
                     }).encode(),
                     topic="interview"
                 )
-
-
+                
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
