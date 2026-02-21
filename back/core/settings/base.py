@@ -120,8 +120,16 @@ cloudinary.config(
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
-
 # Livekit
 LIVEKIT_API_KEY = config("LIVEKIT_API_KEY")
 LIVEKIT_API_SECRET = config("LIVEKIT_API_SECRET")
+
+# OpenRouter API (LLM)
+OPEN_ROUTER_API_KEY = config("OPEN_ROUTER_API_KEY")
+OPEN_ROUTER_LLM_MODEL = config("OPEN_ROUTER_LLM_MODEL")
+OPEN_ROUTER_ENDPOINT = config("OPEN_ROUTER_ENDPOINT")
+
+# Site
+SITE_URL = config("SITE_URL")
+SITE_NAME = config("SITE_NAME")
 

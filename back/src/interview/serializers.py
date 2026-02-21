@@ -56,13 +56,11 @@ class InterviewDetailSerializer(serializers.ModelSerializer):
 
 
 class QASubmissionSerializer(serializers.Serializer):
-    """Represents a single question-answer pair submitted by the frontend."""
     qa_id = serializers.IntegerField()
     answer = serializers.CharField(allow_blank=True)
 
 
 class CompleteInterviewSerializer(serializers.Serializer):
-    """Payload sent by the frontend when finishing an interview."""
     answers = QASubmissionSerializer(many=True)
 
     def validate_answers(self, value):

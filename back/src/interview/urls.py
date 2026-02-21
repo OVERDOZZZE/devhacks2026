@@ -10,6 +10,4 @@ urlpatterns = [
 
     path('interviews/<int:pk>/start/', views.InterviewStartView.as_view(), name='interview-start'),
     path('interviews/<int:pk>/complete/', views.InterviewCompleteView.as_view(), name='interview-complete'),
-
-    path('interviews/<int:interview_pk>/qa/<int:qa_pk>/answer/', views.SubmitAnswerView.as_view(), name='submit-answer'),
 ]

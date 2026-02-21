@@ -27,7 +27,6 @@ def parse_json_response(raw_text: str) -> dict:
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
-        # Try to find a JSON object substring
         match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         if match:
             try:
