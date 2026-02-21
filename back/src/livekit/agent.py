@@ -11,6 +11,7 @@ os.environ.setdefault("LIVEKIT_API_SECRET", config("LIVEKIT_API_SECRET"))
 os.environ.setdefault("OPENAI_API_KEY", config("OPENAI_API_KEY"))
 
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, Agent, RoomInputOptions
+from livekit.agents import AgentSession
 from livekit.plugins import openai, silero
 
 logger = logging.getLogger("interview-agent")
@@ -20,16 +21,44 @@ class InterviewAgent(Agent):
     def __init__(self, questions, room):
         super().__init__(
             instructions=(
-                "You are a professional interview assistant conducting a mock interview. "
-                "Ask the candidate the questions one by one. "
-                "After they answer, move to the next question. "
-                "Be calm, professional and encouraging."
+                "You are a professional interview assistant. "
+                "You will be given explicit instructions for each action to take. "
+                "Only do exactly what you are instructed — do not ask follow-up questions, "
+                "do not continue the conversation on your own, and do not speak unless instructed."
             )
         )
         self.questions = questions
         self.answers = {}
-        self.room = room 
+        self.room = room
 
+    async def _wait_for_answer(self, message_count_before: int) -> str:
+        answer_event = asyncio.Event()
+        captured = {"text": ""}
+
+        def on_transcript(event):
+            if getattr(event, "is_final", True):
+                captured["text"] = getattr(event, "transcript", "") or ""
+                answer_event.set()
+
+        self.session.on("user_input_transcribed", on_transcript)
+
+        try:
+            await asyncio.wait_for(answer_event.wait(), timeout=60.0)
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            self.session.off("user_input_transcribed", on_transcript)
+
+        if not captured["text"]:
+            messages = self.session.history.messages()
+            new_user_messages = [
+                m for m in messages[message_count_before:]
+                if m.role == "user"
+            ]
+            captured["text"] = new_user_messages[-1].content if new_user_messages else ""
+
+        return captured["text"]
+    
     async def on_enter(self):
         await asyncio.sleep(1)
 
@@ -42,15 +71,17 @@ class InterviewAgent(Agent):
                 topic="interview"
             )
 
-            await self.session.generate_reply(
-                instructions=f"Ask the candidate this exact question: {question_text}"
+            message_count_before = len(self.session.history.messages())
+
+            # Speak the exact question text via TTS, no LLM rephrasing
+            await self.session.say(question_text, allow_interruptions=False)
+
+            await self.room.local_participant.publish_data(
+                json.dumps({"type": "question_asked"}).encode(),
+                topic="interview"
             )
 
-            await asyncio.sleep(20)
-
-            messages = self.session.history.messages
-            user_messages = [m for m in messages if m.role == "user"]
-            answer = user_messages[-1].content if user_messages else ""
+            answer = await self._wait_for_answer(message_count_before)
             self.answers[qa_id] = answer
 
             await self.room.local_participant.publish_data(
@@ -59,22 +90,28 @@ class InterviewAgent(Agent):
             )
 
             if i < len(self.questions) - 1:
-                await asyncio.sleep(1)
-
-        await self.session.generate_reply(
-            instructions="Tell the candidate the interview is complete and thank them."
-        )
-        await asyncio.sleep(3)
-
-        await self.room.local_participant.publish_data(
-            json.dumps({
-                "type": "interview_complete",
-                "answers": [{"qa_id": k, "answer": v} for k, v in self.answers.items()]
-            }).encode(),
-            topic="interview"
-        )
-
-
+                await self.session.generate_reply(
+                    instructions=(
+                        "Give ONLY one sentence of feedback on their answer. "
+                        "Then say exactly: 'Moving to the next question.' Nothing else."
+                    )
+                )
+            else:
+                await self.session.generate_reply(
+                    instructions=(
+                        "Give ONLY one sentence of feedback on their final answer. "
+                        "Then say exactly: 'Thank you, the interview is now complete.' Nothing else."
+                    )
+                )
+                await asyncio.sleep(3)
+                await self.room.local_participant.publish_data(
+                    json.dumps({
+                        "type": "interview_complete",
+                        "answers": [{"qa_id": k, "answer": v} for k, v in self.answers.items()]
+                    }).encode(),
+                    topic="interview"
+                )
+                
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
@@ -86,11 +123,10 @@ async def entrypoint(ctx: JobContext):
 
     agent = InterviewAgent(questions=questions, room=ctx.room)
 
-    from livekit.agents import AgentSession
     session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
-        llm=openai.LLM(),
+        llm=openai.LLM(temperature=0),
         tts=openai.TTS(),
     )
 

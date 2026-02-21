@@ -1,4 +1,13 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react' 
+import { useNavigate, useParams } from 'react-router-dom'
+import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
+import client from '../api/client'
+import InterviewRoom from '../components/InterviewRoom'
+
+message.txt
+3 кб
+﻿
+import { useEffect, useState, useRef } from 'react' 
 import { useNavigate, useParams } from 'react-router-dom'
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
 import client from '../api/client'
@@ -9,16 +18,15 @@ const LIVEKIT_URL = 'wss://interview-ai-agent-axxmcvn3.livekit.cloud'
 export default function Session() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const initialized = useRef(false)
   const [token, setToken] = useState(null)
   const [qaPairs, setQaPairs] = useState([])
   const [phase, setPhase] = useState('loading')
   const [connected, setConnected] = useState(false)
+  const initialized = useRef(false)
 
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true
-
     const init = async () => {
       try {
         const startRes = await client.post(`/interviews/${id}/start/`)
@@ -66,8 +74,7 @@ export default function Session() {
       audio={true}
       video={false}
       onConnected={() => setConnected(true)}
-      // Don't reset connected on disconnect — avoids flashing "Connecting..."
-      // mid-interview on brief network hiccups
+      onDisconnected={() => setConnected(false)}
     >
       <RoomAudioRenderer />
       {connected
