@@ -2,13 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import client from '../api/client'
 
-// Static image path by agent name (files in public/agents/: emma.png, jack.png, patel.png)
 function getAgentImageUrl(name) {
   if (!name) return null
   return `/agents/${String(name).toLowerCase()}.png`
 }
 
-// Short description per agent (by name), shown under the name
 function getAgentDescription(name) {
   if (!name) return ''
   const n = String(name).toLowerCase().trim()

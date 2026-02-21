@@ -6,6 +6,7 @@ import Profile from './pages/Profile'
 import NewInterview from './pages/NewInterview'
 import Session from './pages/Session'
 import Results from './pages/Results'
+import CVAnalysis from './pages/CVAnalysis'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/interviews/new" element={<NewInterview />} />
         <Route path="/interviews/:id/session" element={<Session />} />
         <Route path="/interviews/:id/results" element={<Results />} />
+        <Route path="/cv" element={<CVAnalysis />} />
       </Routes>
     </BrowserRouter>
   )

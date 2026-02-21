@@ -434,7 +434,7 @@ export default function InterviewRoom({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              transform: 'scaleX(-1)',  // mirror like a selfie cam
+              transform: 'scaleX(-1)',
             }}
           />
         )}

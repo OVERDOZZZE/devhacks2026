@@ -137,3 +137,14 @@ SITE_NAME = config("SITE_NAME")
 # Gemini
 GEMINI_API_KEY = config("GEMINI_API_KEY")
 GEMINI_LLM_MODEL = config("GEMINI_LLM_MODEL", default="gemini-2.0-flash")
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5175",
+]
+CORS_ALLOW_CREDENTIALS = True
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "Authorization",
+]
