@@ -5,8 +5,8 @@ from livekit.api import AccessToken, VideoGrants, LiveKitAPI
 from livekit.api import CreateRoomRequest
 from django.conf import settings
 from src.interview.models import Interview
+from asgiref.sync import async_to_sync
 import json
-import asyncio
 
 
 @api_view(["GET"])
@@ -40,12 +40,14 @@ def livekit_token(request):
                 CreateRoomRequest(
                     name=room_name,
                     metadata=json.dumps(questions),
-                    empty_timeout=300,  # close room after 5min if empty
-                    max_participants=2,  # user + agent
+                    empty_timeout=300,
+                    max_participants=2,
                 )
             )
 
-    asyncio.run(create_room())
+    # Fix #4: use async_to_sync instead of asyncio.run(), which breaks
+    # when an event loop is already running (e.g. under Uvicorn/Daphne)
+    async_to_sync(create_room)()
 
     token = (
         AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)

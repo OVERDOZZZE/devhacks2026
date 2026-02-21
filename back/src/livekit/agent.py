@@ -11,24 +11,56 @@ os.environ.setdefault("LIVEKIT_API_SECRET", config("LIVEKIT_API_SECRET"))
 os.environ.setdefault("OPENAI_API_KEY", config("OPENAI_API_KEY"))
 
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, Agent, RoomInputOptions
+from livekit.agents import AgentSession
 from livekit.plugins import openai, silero
 
 logger = logging.getLogger("interview-agent")
+
+SILENCE_TIMEOUT = 5.0   # seconds of silence before answer is considered done
+SILENCE_CHECK_INTERVAL = 0.2
 
 
 class InterviewAgent(Agent):
     def __init__(self, questions, room):
         super().__init__(
             instructions=(
-                "You are a professional interview assistant conducting a mock interview. "
-                "Ask the candidate the questions one by one. "
-                "After they answer, move to the next question. "
-                "Be calm, professional and encouraging."
+                "You are a professional interview assistant. "
+                "You will be given explicit instructions for each action to take. "
+                "Only do exactly what you are instructed — do not ask follow-up questions, "
+                "do not continue the conversation on your own, and do not speak unless instructed."
             )
         )
         self.questions = questions
         self.answers = {}
-        self.room = room 
+        self.room = room
+
+    async def _wait_for_answer(self, message_count_before: int) -> str:
+        """
+        Fix #3: Real silence-based end-of-speech detection.
+        Waits until the VAD reports the user has stopped speaking for
+        SILENCE_TIMEOUT seconds, then grabs everything said since
+        message_count_before as the answer.
+        """
+        silence_elapsed = 0.0
+
+        while silence_elapsed < SILENCE_TIMEOUT:
+            await asyncio.sleep(SILENCE_CHECK_INTERVAL)
+
+            vad_state = self.session.input.audio.vad_state if self.session.input.audio else None
+
+            if vad_state is not None and vad_state.speech_probability > 0.5:
+                # Candidate is still talking — reset the silence counter
+                silence_elapsed = 0.0
+            else:
+                silence_elapsed += SILENCE_CHECK_INTERVAL
+
+        # Fix #2: only look at messages added after this question was asked
+        messages = self.session.history.messages()
+        new_user_messages = [
+            m for m in messages[message_count_before:]
+            if m.role == "user"
+        ]
+        return new_user_messages[-1].content if new_user_messages else ""
 
     async def on_enter(self):
         await asyncio.sleep(1)
@@ -42,15 +74,19 @@ class InterviewAgent(Agent):
                 topic="interview"
             )
 
+            # Snapshot history length before asking so we can isolate the answer
+            message_count_before = len(self.session.history.messages())
+
             await self.session.generate_reply(
                 instructions=f"Ask the candidate this exact question: {question_text}"
             )
 
-            await asyncio.sleep(20)
+            await self.room.local_participant.publish_data(
+                json.dumps({"type": "question_asked"}).encode(),
+                topic="interview"
+            )
 
-            messages = self.session.history.messages
-            user_messages = [m for m in messages if m.role == "user"]
-            answer = user_messages[-1].content if user_messages else ""
+            answer = await self._wait_for_answer(message_count_before)
             self.answers[qa_id] = answer
 
             await self.room.local_participant.publish_data(
@@ -59,21 +95,28 @@ class InterviewAgent(Agent):
             )
 
             if i < len(self.questions) - 1:
-                await asyncio.sleep(1)
-
-        await self.session.generate_reply(
-            instructions="Tell the candidate the interview is complete and thank them."
-        )
-        await asyncio.sleep(3)
-
-        await self.room.local_participant.publish_data(
-            json.dumps({
-                "type": "interview_complete",
-                "answers": [{"qa_id": k, "answer": v} for k, v in self.answers.items()]
-            }).encode(),
-            topic="interview"
-        )
-
+                await self.session.generate_reply(
+                    instructions=(
+                        "Give the candidate one short sentence of feedback on their answer. "
+                        "Then say you are moving to the next question. Keep it under 20 words total."
+                    )
+                )
+            else:
+                await self.session.generate_reply(
+                    instructions=(
+                        "Give the candidate one short sentence of feedback on their final answer. "
+                        "Then thank them briefly and say the interview is now complete. "
+                        "Keep it under 30 words total."
+                    )
+                )
+                await asyncio.sleep(3)
+                await self.room.local_participant.publish_data(
+                    json.dumps({
+                        "type": "interview_complete",
+                        "answers": [{"qa_id": k, "answer": v} for k, v in self.answers.items()]
+                    }).encode(),
+                    topic="interview"
+                )
 
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
@@ -86,7 +129,6 @@ async def entrypoint(ctx: JobContext):
 
     agent = InterviewAgent(questions=questions, room=ctx.room)
 
-    from livekit.agents import AgentSession
     session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
