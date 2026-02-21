@@ -1,14 +1,9 @@
+
 def build_question_generation_messages(
     agent_prompt: str,
     job_description: str | None,
     number_of_questions: int,
 ) -> list[dict]:
-    """
-    Build the messages list to send to the LLM for question generation.
-
-    The agent_prompt is the system-level persona/instructions defined by the Agent model.
-    The user message instructs the model to produce exactly N questions as a numbered list.
-    """
     system_content = agent_prompt.strip()
 
     user_lines = [
@@ -33,62 +28,38 @@ def build_question_generation_messages(
     ]
 
 
-def build_answer_scoring_messages(
-    agent_prompt: str,
-    question_text: str,
-    answer_text: str,
-) -> list[dict]:
-    """
-    Build the messages list to send to the LLM for scoring a single answer.
-
-    Returns a prompt that instructs the model to reply with JSON containing:
-      { "score": <int 1-10>, "feedback": "<string>" }
-    """
-    system_content = agent_prompt.strip()
-
-    user_content = (
-        f"You are evaluating a candidate's answer during a mock interview.\n\n"
-        f"Question: {question_text.strip()}\n\n"
-        f"Candidate's answer: {answer_text.strip()}\n\n"
-        "Evaluate the answer and respond with ONLY valid JSON in this exact format:\n"
-        '{ "score": <integer from 1 to 10>, "feedback": "<one or two sentence feedback>" }\n'
-        "Do not include any other text."
-    )
-
-    return [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": user_content},
-    ]
-
-
-def build_overall_feedback_messages(
+def build_full_evaluation_messages(
     agent_prompt: str,
     qa_pairs: list[dict],
 ) -> list[dict]:
-    """
-    Build the messages list for computing overall interview score and feedback.
-
-    qa_pairs: list of {"question": str, "answer": str, "score": int, "feedback": str}
-
-    Instructs the model to reply with JSON:
-      { "overall_score": <int 1-10>, "overall_feedback": "<paragraph>" }
-    """
+    
     system_content = agent_prompt.strip()
 
-    lines = ["Here is a summary of all Q&A pairs from the interview:\n"]
-    for i, qa in enumerate(qa_pairs, start=1):
-        lines.append(
-            f"{i}. Question: {qa['question']}\n"
-            f"   Answer: {qa.get('answer') or '(no answer)'}\n"
-            f"   Score: {qa.get('score', 'N/A')}/10\n"
-            f"   Feedback: {qa.get('feedback', 'N/A')}\n"
-        )
+    lines = [
+        "You are evaluating a candidate's performance in a mock interview.",
+        "Below are all the questions and the candidate's answers.\n",
+    ]
+
+    for qa in qa_pairs:
+        lines.append(f"[ID: {qa['qa_id']}]")
+        lines.append(f"Question: {qa['question']}")
+        lines.append(f"Answer: {qa.get('answer') or '(no answer given)'}")
+        lines.append("")
 
     lines += [
-        "Based on all of the above, provide an overall assessment.",
-        "Respond with ONLY valid JSON in this exact format:",
-        '{ "overall_score": <integer from 1 to 10>, "overall_feedback": "<two to four sentence summary>" }',
-        "Do not include any other text.",
+        "For each question-answer pair, provide a score (1-10) and one or two sentences of feedback.",
+        "Then provide an overall score (1-10) and a short overall feedback paragraph (2-4 sentences) "
+        "summarising the candidate's strengths and areas for improvement.",
+        "",
+        "Respond with ONLY valid JSON in exactly this format (no extra text, no markdown fences):",
+        '{',
+        '  "evaluations": [',
+        '    {"qa_id": <id>, "score": <1-10>, "feedback": "<string>"},',
+        '    ...',
+        '  ],',
+        '  "overall_score": <1-10>,',
+        '  "overall_feedback": "<string>"',
+        '}',
     ]
 
     return [

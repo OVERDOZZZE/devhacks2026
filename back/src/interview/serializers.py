@@ -33,7 +33,7 @@ class InterviewListSerializer(serializers.ModelSerializer):
             'status', 'overall_score', 'created_at', 'completed_at'
         ]
         read_only_fields = ['status', 'overall_score', 'created_at', 'completed_at']
-        
+
 
 class InterviewDetailSerializer(serializers.ModelSerializer):
     agent = AgentSerializer(read_only=True)
@@ -55,8 +55,18 @@ class InterviewDetailSerializer(serializers.ModelSerializer):
         ]
 
 
-class SubmitAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = InterviewQA
-        fields = ['answer']
+class QASubmissionSerializer(serializers.Serializer):
+    """Represents a single question-answer pair submitted by the frontend."""
+    qa_id = serializers.IntegerField()
+    answer = serializers.CharField(allow_blank=True)
 
+
+class CompleteInterviewSerializer(serializers.Serializer):
+    """Payload sent by the frontend when finishing an interview."""
+    answers = QASubmissionSerializer(many=True)
+
+    def validate_answers(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one answer must be submitted.")
+        return value
+    
