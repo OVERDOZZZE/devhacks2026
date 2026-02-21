@@ -34,6 +34,7 @@ class Question(models.Model):
 class Interview(models.Model):
     class NumberOfQuestions(models.IntegerChoices):
         Q1  = 1
+        Q3 = 3
         Q5  = 5
         Q10 = 10
         Q15 = 15
