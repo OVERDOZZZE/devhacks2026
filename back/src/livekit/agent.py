@@ -16,6 +16,10 @@ from livekit.plugins import openai, silero
 
 logger = logging.getLogger("interview-agent")
 
+# All voices supported by OpenAI TTS (tts-1 / tts-1-hd).
+# If the value coming from the DB is unrecognised we fall back to "alloy".
+VALID_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
+
 
 class InterviewAgent(Agent):
     def __init__(self, questions, room):
@@ -28,8 +32,8 @@ class InterviewAgent(Agent):
             )
         )
         self.questions = questions
-        self.answers = {}
-        self.room = room
+        self.answers   = {}
+        self.room      = room
 
     async def _wait_for_answer(self, message_count_before: int) -> str:
         answer_event = asyncio.Event()
@@ -58,27 +62,27 @@ class InterviewAgent(Agent):
             captured["text"] = new_user_messages[-1].content if new_user_messages else ""
 
         return captured["text"]
-    
+
     async def on_enter(self):
         await asyncio.sleep(1)
 
         for i, qa in enumerate(self.questions):
-            qa_id = qa["qa_id"]
+            qa_id         = qa["qa_id"]
             question_text = qa["question"]
 
             await self.room.local_participant.publish_data(
                 json.dumps({"type": "question_index", "index": i}).encode(),
-                topic="interview"
+                topic="interview",
             )
 
             message_count_before = len(self.session.history.messages())
 
-            # Speak the exact question text via TTS, no LLM rephrasing
+            # Speak the exact question text — no LLM rephrasing
             await self.session.say(question_text, allow_interruptions=False)
 
             await self.room.local_participant.publish_data(
                 json.dumps({"type": "question_asked"}).encode(),
-                topic="interview"
+                topic="interview",
             )
 
             answer = await self._wait_for_answer(message_count_before)
@@ -86,10 +90,12 @@ class InterviewAgent(Agent):
 
             await self.room.local_participant.publish_data(
                 json.dumps({"type": "answer_captured", "qa_id": qa_id, "answer": answer}).encode(),
-                topic="interview"
+                topic="interview",
             )
 
-            if i < len(self.questions) - 1:
+            is_last = i == len(self.questions) - 1
+
+            if not is_last:
                 await self.session.generate_reply(
                     instructions=(
                         "Give ONLY one sentence of feedback on their answer. "
@@ -107,19 +113,39 @@ class InterviewAgent(Agent):
                 await self.room.local_participant.publish_data(
                     json.dumps({
                         "type": "interview_complete",
-                        "answers": [{"qa_id": k, "answer": v} for k, v in self.answers.items()]
+                        "answers": [{"qa_id": k, "answer": v} for k, v in self.answers.items()],
                     }).encode(),
-                    topic="interview"
+                    topic="interview",
                 )
-                
+
+
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    questions = json.loads(ctx.room.metadata or "[]")
+    # ------------------------------------------------------------------ #
+    # Room metadata structure (set by obtain_token.py):                   #
+    #   { "questions": [...], "voice": "nova" }                           #
+    # ------------------------------------------------------------------ #
+    raw_metadata = ctx.room.metadata or "{}"
+    try:
+        metadata = json.loads(raw_metadata)
+    except json.JSONDecodeError:
+        logger.warning("Could not parse room metadata as JSON; falling back to defaults.")
+        metadata = {}
+
+    questions = metadata.get("questions", [])
+    voice     = metadata.get("voice", "alloy")
 
     if not questions:
-        logger.warning("No questions in room metadata.")
+        logger.warning("No questions found in room metadata — aborting.")
         return
+
+    # Guard against invalid / misspelled voice names
+    if voice not in VALID_VOICES:
+        logger.warning("Unknown TTS voice %r — falling back to 'alloy'.", voice)
+        voice = "alloy"
+
+    logger.info("Starting interview with voice=%r, %d questions.", voice, len(questions))
 
     agent = InterviewAgent(questions=questions, room=ctx.room)
 
@@ -127,7 +153,7 @@ async def entrypoint(ctx: JobContext):
         vad=silero.VAD.load(),
         stt=openai.STT(),
         llm=openai.LLM(temperature=0),
-        tts=openai.TTS(),
+        tts=openai.TTS(voice=voice),   # ← voice is applied here
     )
 
     await session.start(

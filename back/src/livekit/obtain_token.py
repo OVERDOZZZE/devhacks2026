@@ -15,9 +15,9 @@ def livekit_token(request):
     interview_id = request.query_params.get("interview_id")
 
     try:
-        interview = Interview.objects.prefetch_related("qa_pairs__question").get(
+        interview = Interview.objects.prefetch_related("qa_pairs__question").select_related("agent").get(
             pk=interview_id,
-            user=request.user
+            user=request.user,
         )
     except Interview.DoesNotExist:
         return Response({"detail": "Interview not found."}, status=404)
@@ -27,8 +27,15 @@ def livekit_token(request):
         for qa in interview.qa_pairs.order_by("order")
     ]
 
+    # Bundle everything the LiveKit worker needs into room metadata.
+    # The worker reads this once on job start — no extra API calls needed.
+    metadata = {
+        "questions": questions,
+        "voice": interview.agent.voice if interview.agent else "alloy",
+    }
+
     room_name = f"interview-{interview_id}"
-    identity = f"user-{request.user.id}"
+    identity  = f"user-{request.user.id}"
 
     async def create_room():
         async with LiveKitAPI(
@@ -39,14 +46,12 @@ def livekit_token(request):
             await lk.room.create_room(
                 CreateRoomRequest(
                     name=room_name,
-                    metadata=json.dumps(questions),
+                    metadata=json.dumps(metadata),
                     empty_timeout=300,
                     max_participants=2,
                 )
             )
 
-    # Fix #4: use async_to_sync instead of asyncio.run(), which breaks
-    # when an event loop is already running (e.g. under Uvicorn/Daphne)
     async_to_sync(create_room)()
 
     token = (
