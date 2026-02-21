@@ -47,7 +47,7 @@ export default function Register() {
   }
 
   return (
-    <div style={{
+    <div className="register-page" style={{
       minHeight: '100vh',
       background: '#f9fafb',
       display: 'flex',
@@ -55,7 +55,14 @@ export default function Register() {
       justifyContent: 'center',
       padding: 24,
     }}>
-      <div style={{
+      <style>{`
+        @media (max-width: 768px) {
+          .register-page { padding: 16px !important; }
+          .register-container { flex-direction: column !important; max-width: 440px !important; }
+          .register-form-panel { min-width: 0 !important; padding: 24px 20px !important; }
+        }
+      `}</style>
+      <div className="register-container" style={{
         display: 'flex',
         background: '#fff',
         borderRadius: 12,
@@ -64,7 +71,7 @@ export default function Register() {
         width: '100%',
         overflow: 'hidden',
       }}>
-        <div style={{
+        <div className="register-form-panel" style={{
           flex: 1,
           minWidth: 320,
           padding: '32px 40px',

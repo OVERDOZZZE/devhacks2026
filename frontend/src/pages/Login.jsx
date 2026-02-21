@@ -52,7 +52,7 @@ export default function Login() {
   }
 
   return (
-    <div style={{
+    <div className="login-page" style={{
       minHeight: '100vh',
       background: '#f9fafb',
       display: 'flex',
@@ -60,7 +60,14 @@ export default function Login() {
       justifyContent: 'center',
       padding: 24,
     }}>
-      <div style={{
+      <style>{`
+        @media (max-width: 768px) {
+          .login-page { padding: 16px !important; }
+          .login-container { flex-direction: column !important; max-width: 440px !important; }
+          .login-form-panel { min-width: 0 !important; padding: 24px 20px !important; }
+        }
+      `}</style>
+      <div className="login-container" style={{
         display: 'flex',
         background: '#fff',
         borderRadius: 12,
@@ -69,7 +76,7 @@ export default function Login() {
         width: '100%',
         overflow: 'hidden',
       }}>
-        <div style={{
+        <div className="login-form-panel" style={{
           flex: 1,
           minWidth: 320,
           padding: '32px 40px',

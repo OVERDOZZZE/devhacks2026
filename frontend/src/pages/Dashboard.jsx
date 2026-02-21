@@ -38,9 +38,17 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function normalizeStatus(s) {
+  if (s == null) return ''
+  const lower = String(s).toLowerCase().trim()
+  if (lower === 'in progress') return 'in_progress'
+  return lower
+}
+
 function StatusBadge({ status }) {
-  const isCompleted = status === 'completed'
-  const isInProgress = status === 'in_progress' || status === 'in progress'
+  const norm = normalizeStatus(status)
+  const isCompleted = norm === 'completed'
+  const isInProgress = norm === 'in_progress'
   const style = {
     display: 'inline-block',
     padding: '4px 10px',
@@ -56,7 +64,7 @@ function StatusBadge({ status }) {
   if (isInProgress) {
     return <span style={{ ...style, background: colors.infoBg, color: colors.info }}>In progress</span>
   }
-  return <span style={{ ...style, background: colors.warningBg, color: colors.warning }}>{status}</span>
+  return <span style={{ ...style, background: colors.warningBg, color: colors.warning }}>{status ?? 'Pending'}</span>
 }
 
 export default function Dashboard() {
@@ -78,8 +86,8 @@ export default function Dashboard() {
   }
 
   const stats = useMemo(() => {
-    const completed = interviews.filter(i => i.status === 'completed')
-    const inProgress = interviews.filter(i => (i.status === 'in_progress' || i.status === 'in progress'))
+    const completed = interviews.filter(i => normalizeStatus(i.status) === 'completed')
+    const inProgress = interviews.filter(i => normalizeStatus(i.status) === 'in_progress')
     const withScore = completed.filter(i => i.overall_score != null)
     const avgScore = withScore.length
       ? (withScore.reduce((s, i) => s + Number(i.overall_score), 0) / withScore.length).toFixed(1)
@@ -96,8 +104,8 @@ export default function Dashboard() {
 
   const filteredInterviews = useMemo(() => {
     let list = [...interviews].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    if (filter === 'completed') list = list.filter(i => i.status === 'completed')
-    if (filter === 'in_progress') list = list.filter(i => i.status === 'in_progress' || i.status === 'in progress')
+    if (filter === 'completed') list = list.filter(i => normalizeStatus(i.status) === 'completed')
+    if (filter === 'in_progress') list = list.filter(i => normalizeStatus(i.status) === 'in_progress')
     return list
   }, [interviews, filter])
 
@@ -127,11 +135,31 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ height: '100vh', background: colors.bg, display: 'flex', overflow: 'hidden' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div className="dashboard-layout" style={{ height: '100vh', background: colors.bg, display: 'flex', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 900px) {
+          .dashboard-layout { flex-direction: column; height: auto; min-height: 100vh; }
+          .dashboard-sidebar { width: 100% !important; height: auto !important; min-height: auto !important; flex-direction: row !important; flex-wrap: wrap !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; }
+          .dashboard-sidebar nav { flex: 1 1 auto !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 8 !important; padding: 12px !important; }
+          .dashboard-sidebar .sidebar-logout { width: auto !important; min-width: 80px; border-top: none !important; border-left: 1px solid #e2e8f0 !important; }
+          .dashboard-main { min-height: 50vh !important; }
+        }
+        @media (max-width: 600px) {
+          .dashboard-header-inner { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .dashboard-content { padding: 16px !important; }
+          .dashboard-header { padding: 16px 20px !important; }
+          .dashboard-kpi { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .dashboard-kpi .kpi-card { padding: 14px !important; }
+          .dashboard-kpi .kpi-value { font-size: 22px !important; }
+          .dashboard-section-top { flex-direction: column !important; align-items: flex-start !important; }
+          .dashboard-card-row { flex-direction: column !important; align-items: flex-start !important; }
+          .dashboard-card-left { flex-wrap: wrap !important; }
+        }
+      `}</style>
 
       {/* Sidebar */}
-      <aside style={{
+      <aside className="dashboard-sidebar" style={{
         width: sidebarWidth,
         height: '100vh',
         background: colors.surface,
@@ -141,34 +169,36 @@ export default function Dashboard() {
         flexShrink: 0,
         overflow: 'hidden',
       }}>
-        <div style={{ padding: '24px 20px', borderBottom: `1px solid ${colors.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              background: colors.primary,
-              borderRadius: radius.md,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 16, color: colors.text }}>
-                Dashboard
+        <Link to="/dashboard" style={{ textDecoration: 'none' }}>
+          <div style={{ padding: '24px 20px', borderBottom: `1px solid ${colors.border}`, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                background: colors.primary,
+                borderRadius: radius.md,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
               </div>
-              <div style={{ marginTop: 2, fontFamily: bodyFont, fontSize: 12, color: colors.textMuted }}>
-                {stats.total} total session{stats.total !== 1 ? 's' : ''}
+              <div>
+                <div style={{ fontFamily: headingFont, fontWeight: 700, fontSize: 16, color: colors.text }}>
+                  Dashboard
+                </div>
+                <div style={{ marginTop: 2, fontFamily: bodyFont, fontSize: 12, color: colors.textMuted }}>
+                  {stats.total} total session{stats.total !== 1 ? 's' : ''}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </Link>
         <nav style={{ flex: 1, padding: '16px 12px' }}>
           <Link
             to="/dashboard"
@@ -210,7 +240,7 @@ export default function Dashboard() {
             Profile
           </Link>
         </nav>
-        <div style={{ padding: '16px 12px', borderTop: `1px solid ${colors.border}` }}>
+        <div className="sidebar-logout" style={{ padding: '16px 12px', borderTop: `1px solid ${colors.border}` }}>
           <button
             onClick={handleLogout}
             style={{
@@ -232,7 +262,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main */}
-      <main style={{
+      <main className="dashboard-main" style={{
         flex: 1,
         minWidth: 0,
         height: '100vh',
@@ -242,13 +272,13 @@ export default function Dashboard() {
         fontFamily: bodyFont,
       }}>
         {/* Page header */}
-        <header style={{
+        <header className="dashboard-header" style={{
           flexShrink: 0,
           padding: '24px 32px',
           borderBottom: `1px solid ${colors.border}`,
           background: colors.surface,
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <div className="dashboard-header-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <h1 style={{
                 fontFamily: headingFont,
@@ -282,15 +312,15 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 32 }}>
+        <div className="dashboard-content" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 32 }}>
           {/* KPI cards */}
-          <div style={{
+          <div className="dashboard-kpi" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
             gap: 16,
             marginBottom: 28,
           }}>
-            <div style={{
+            <div className="kpi-card" style={{
               background: colors.surface,
               border: `1px solid ${colors.border}`,
               borderRadius: radius.lg,
@@ -298,9 +328,9 @@ export default function Dashboard() {
               boxShadow: shadow,
             }}>
               <div style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500, marginBottom: 4 }}>Total sessions</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: colors.text, fontFamily: headingFont }}>{stats.total}</div>
+              <div className="kpi-value" style={{ fontSize: 28, fontWeight: 700, color: colors.text, fontFamily: headingFont }}>{stats.total}</div>
             </div>
-            <div style={{
+            <div className="kpi-card" style={{
               background: colors.surface,
               border: `1px solid ${colors.border}`,
               borderRadius: radius.lg,
@@ -308,12 +338,12 @@ export default function Dashboard() {
               boxShadow: shadow,
             }}>
               <div style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500, marginBottom: 4 }}>Completed</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: colors.success, fontFamily: headingFont }}>{stats.completed}</div>
+              <div className="kpi-value" style={{ fontSize: 28, fontWeight: 700, color: colors.success, fontFamily: headingFont }}>{stats.completed}</div>
               {stats.total > 0 && (
                 <div style={{ fontSize: 12, color: colors.textMuted, marginTop: 4 }}>{stats.completionRate}% completion</div>
               )}
             </div>
-            <div style={{
+            <div className="kpi-card" style={{
               background: colors.surface,
               border: `1px solid ${colors.border}`,
               borderRadius: radius.lg,
@@ -321,9 +351,9 @@ export default function Dashboard() {
               boxShadow: shadow,
             }}>
               <div style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500, marginBottom: 4 }}>In progress</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: colors.info, fontFamily: headingFont }}>{stats.inProgress}</div>
+              <div className="kpi-value" style={{ fontSize: 28, fontWeight: 700, color: colors.info, fontFamily: headingFont }}>{stats.inProgress}</div>
             </div>
-            <div style={{
+            <div className="kpi-card" style={{
               background: colors.surface,
               border: `1px solid ${colors.border}`,
               borderRadius: radius.lg,
@@ -331,7 +361,7 @@ export default function Dashboard() {
               boxShadow: shadow,
             }}>
               <div style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500, marginBottom: 4 }}>Average score</div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: colors.text, fontFamily: headingFont }}>
+              <div className="kpi-value" style={{ fontSize: 28, fontWeight: 700, color: colors.text, fontFamily: headingFont }}>
                 {stats.avgScore != null ? `${stats.avgScore}/10` : '—'}
               </div>
             </div>
@@ -339,7 +369,7 @@ export default function Dashboard() {
 
           {/* Section: Interview history */}
           <section>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+            <div className="dashboard-section-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <h2 style={{
                 fontFamily: headingFont,
                 fontSize: 16,
@@ -412,6 +442,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={interview.id}
+                      className="dashboard-card-row"
                       style={{
                         background: colors.surface,
                         border: `1px solid ${colors.border}`,
@@ -425,7 +456,7 @@ export default function Dashboard() {
                         flexWrap: 'wrap',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
+                      <div className="dashboard-card-left" style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 0 }}>
                         <div style={{
                           width: 44,
                           height: 44,
@@ -456,7 +487,7 @@ export default function Dashboard() {
                             <div style={{ fontSize: 20, fontWeight: 700, color: colors.text }}>{interview.overall_score}/10</div>
                           </div>
                         )}
-                        {interview.status === 'completed' ? (
+                        {normalizeStatus(interview.status) === 'completed' ? (
                           <button
                             onClick={() => navigate(`/interviews/${interview.id}/results`)}
                             style={{

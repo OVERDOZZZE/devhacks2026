@@ -61,8 +61,14 @@ export default function Results() {
   }
 
   return (
-    <div style={{ maxWidth: 700, margin: '40px auto', padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+    <div className="results-page" style={{ maxWidth: 700, margin: '40px auto', padding: 24 }}>
+      <style>{`
+        @media (max-width: 600px) {
+          .results-page { margin: 20px auto !important; padding: 16px !important; }
+          .results-header { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+        }
+      `}</style>
+      <div className="results-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <h1 style={{ margin: 0 }}>Interview Results</h1>
         <button
           onClick={() => navigate('/dashboard')}

@@ -8,6 +8,19 @@ function getAgentImageUrl(name) {
   return `/agents/${String(name).toLowerCase()}.png`
 }
 
+// Short description per agent (by name), shown under the name
+function getAgentDescription(name) {
+  if (!name) return ''
+  const n = String(name).toLowerCase().trim()
+  const descriptions = {
+    emma: 'Female interviewer with a warm, conversational style—great for putting candidates at ease.',
+    james: 'Direct, no-nonsense interviewer who keeps the pace tight and focuses on outcomes and experience.',
+    marcus: 'Male interviewer focused on technical depth and structured questions.',
+    sophie: 'Friendly interviewer who blends behavioral and situational questions with a relaxed tone.',
+  }
+  return descriptions[n] || ''
+}
+
 export default function NewInterview() {
   const navigate = useNavigate()
   const [agents, setAgents] = useState([])
@@ -52,8 +65,17 @@ export default function NewInterview() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: 24 }}>
-      <div style={{ position: 'absolute', top: 24, left: 24 }}>
+    <div className="new-interview-page" style={{ minHeight: '100vh', background: '#f9fafb', padding: 24 }}>
+      <style>{`
+        @media (max-width: 600px) {
+          .new-interview-page { padding: 16px !important; }
+          .new-interview-page .back-wrap { top: 16px !important; left: 16px !important; }
+          .new-interview-form-box { padding: 24px 20px !important; margin-top: 48px !important; }
+          .new-interview-form-box h1 { font-size: 20px !important; }
+          .agent-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div className="back-wrap" style={{ position: 'absolute', top: 24, left: 24 }}>
         <Link to="/dashboard">
           <button
             type="button"
@@ -74,11 +96,11 @@ export default function NewInterview() {
       </div>
 
       <div style={{
-        maxWidth: 500,
+        maxWidth: 560,
         margin: '0 auto',
         paddingTop: 60,
       }}>
-        <div style={{
+        <div className="new-interview-form-box" style={{
           background: '#fff',
           borderRadius: 12,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
@@ -108,18 +130,18 @@ export default function NewInterview() {
               {agentsLoading ? (
                 <p style={{ fontSize: 14, color: '#6b7280' }}>Loading agents...</p>
               ) : (
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div className="agent-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                   {agents.map((agent) => {
                     const imageUrl = getAgentImageUrl(agent.name)
+                    const description = getAgentDescription(agent.name)
                     return (
                       <button
                         key={agent.id}
                         type="button"
                         onClick={() => setForm({ ...form, agent_id: String(agent.id) })}
                         style={{
-                          flex: 1,
-                          minWidth: 120,
-                          padding: imageUrl ? '12px 16px' : '14px 16px',
+                          width: '100%',
+                          padding: imageUrl ? '14px 16px' : '16px',
                           border: form.agent_id === String(agent.id) ? '2px solid #000' : '1px solid #e5e7eb',
                           borderRadius: 8,
                           background: form.agent_id === String(agent.id) ? '#f3f4f6' : '#fff',
@@ -130,7 +152,9 @@ export default function NewInterview() {
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          gap: 8,
+                          gap: 6,
+                          textAlign: 'center',
+                          boxSizing: 'border-box',
                         }}
                       >
                         {imageUrl ? (
@@ -146,10 +170,22 @@ export default function NewInterview() {
                               }}
                               onError={(e) => { e.target.style.display = 'none' }}
                             />
-                            <span>{agent.name}</span>
+                            <span style={{ fontWeight: 600 }}>{agent.name}</span>
+                            {description && (
+                              <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280', lineHeight: 1.3 }}>
+                                {description}
+                              </span>
+                            )}
                           </>
                         ) : (
-                          agent.name
+                          <>
+                            <span style={{ fontWeight: 600 }}>{agent.name}</span>
+                            {description && (
+                              <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280', lineHeight: 1.3 }}>
+                                {description}
+                              </span>
+                            )}
+                          </>
                         )}
                       </button>
                     )
