@@ -7,3 +7,4 @@ db.sqlite3
 back/django.log
 back/.env
 .env
+frontend/node_modules/
