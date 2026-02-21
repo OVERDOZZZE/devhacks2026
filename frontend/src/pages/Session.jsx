@@ -4,15 +4,6 @@ import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
 import client from '../api/client'
 import InterviewRoom from '../components/InterviewRoom'
 
-message.txt
-3 кб
-﻿
-import { useEffect, useState, useRef } from 'react' 
-import { useNavigate, useParams } from 'react-router-dom'
-import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
-import client from '../api/client'
-import InterviewRoom from '../components/InterviewRoom'
-
 const LIVEKIT_URL = 'wss://interview-ai-agent-axxmcvn3.livekit.cloud'
 
 export default function Session() {
