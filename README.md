@@ -58,7 +58,7 @@ python manage.py runserver
 
 ### Agent
 ```bash
-python agent.py start
+python src/livekit/agent.py start
 ```
 
 ### Frontend
