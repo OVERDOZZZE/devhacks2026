@@ -7,15 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "dev-server": "vite dev-server",
-    "start": "vite start"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.20",
-    "@livekit/components-styles": "^1.2.0",
+    "axios": "^1.13.5",
     "livekit-client": "^2.17.2",
-    "material-icons": "^1.13.14",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.0"
@@ -29,9 +26,6 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "vite": "^8.0.0-beta.13"
-  },
-  "overrides": {
-    "vite": "^8.0.0-beta.13"
+    "vite": "^7.3.1"
   }
 }

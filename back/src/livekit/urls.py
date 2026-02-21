@@ -3,5 +3,5 @@ from .obtain_token import *
 
 
 urlpatterns = [
-    path("get_token/", livekit_token, name="livekit_token")
+    path("livekit/get_token/", livekit_token, name="livekit_token")
 ]

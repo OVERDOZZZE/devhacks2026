@@ -121,6 +121,7 @@ DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 
 # Livekit
+LIVEKIT_URL = config("LIVEKIT_URL")
 LIVEKIT_API_KEY = config("LIVEKIT_API_KEY")
 LIVEKIT_API_SECRET = config("LIVEKIT_API_SECRET")
 
