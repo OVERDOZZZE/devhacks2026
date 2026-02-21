@@ -16,9 +16,6 @@ from livekit.plugins import openai, silero
 
 logger = logging.getLogger("interview-agent")
 
-SILENCE_TIMEOUT = 5.0   # seconds of silence before answer is considered done
-SILENCE_CHECK_INTERVAL = 0.2
-
 
 class InterviewAgent(Agent):
     def __init__(self, questions, room):
@@ -35,32 +32,32 @@ class InterviewAgent(Agent):
         self.room = room
 
     async def _wait_for_answer(self, message_count_before: int) -> str:
-        """
-        Fix #3: Real silence-based end-of-speech detection.
-        Waits until the VAD reports the user has stopped speaking for
-        SILENCE_TIMEOUT seconds, then grabs everything said since
-        message_count_before as the answer.
-        """
-        silence_elapsed = 0.0
+        answer_event = asyncio.Event()
+        captured = {"text": ""}
 
-        while silence_elapsed < SILENCE_TIMEOUT:
-            await asyncio.sleep(SILENCE_CHECK_INTERVAL)
+        def on_transcript(event):
+            if getattr(event, "is_final", True):
+                captured["text"] = getattr(event, "transcript", "") or ""
+                answer_event.set()
 
-            vad_state = self.session.input.audio.vad_state if self.session.input.audio else None
+        self.session.on("user_input_transcribed", on_transcript)
 
-            if vad_state is not None and vad_state.speech_probability > 0.5:
-                # Candidate is still talking — reset the silence counter
-                silence_elapsed = 0.0
-            else:
-                silence_elapsed += SILENCE_CHECK_INTERVAL
+        try:
+            await asyncio.wait_for(answer_event.wait(), timeout=60.0)
+        except asyncio.TimeoutError:
+            pass
+        finally:
+            self.session.off("user_input_transcribed", on_transcript)
 
-        # Fix #2: only look at messages added after this question was asked
-        messages = self.session.history.messages()
-        new_user_messages = [
-            m for m in messages[message_count_before:]
-            if m.role == "user"
-        ]
-        return new_user_messages[-1].content if new_user_messages else ""
+        if not captured["text"]:
+            messages = self.session.history.messages()
+            new_user_messages = [
+                m for m in messages[message_count_before:]
+                if m.role == "user"
+            ]
+            captured["text"] = new_user_messages[-1].content if new_user_messages else ""
+
+        return captured["text"]
 
     async def on_enter(self):
         await asyncio.sleep(1)
@@ -74,7 +71,6 @@ class InterviewAgent(Agent):
                 topic="interview"
             )
 
-            # Snapshot history length before asking so we can isolate the answer
             message_count_before = len(self.session.history.messages())
 
             await self.session.generate_reply(
@@ -97,16 +93,15 @@ class InterviewAgent(Agent):
             if i < len(self.questions) - 1:
                 await self.session.generate_reply(
                     instructions=(
-                        "Give the candidate one short sentence of feedback on their answer. "
-                        "Then say you are moving to the next question. Keep it under 20 words total."
+                        "Give ONLY one sentence of feedback on their answer. "
+                        "Then say exactly: 'Moving to the next question.' Nothing else."
                     )
                 )
             else:
                 await self.session.generate_reply(
                     instructions=(
-                        "Give the candidate one short sentence of feedback on their final answer. "
-                        "Then thank them briefly and say the interview is now complete. "
-                        "Keep it under 30 words total."
+                        "Give ONLY one sentence of feedback on their final answer. "
+                        "Then say exactly: 'Thank you, the interview is now complete.' Nothing else."
                     )
                 )
                 await asyncio.sleep(3)
@@ -117,6 +112,7 @@ class InterviewAgent(Agent):
                     }).encode(),
                     topic="interview"
                 )
+
 
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
@@ -132,7 +128,7 @@ async def entrypoint(ctx: JobContext):
     session = AgentSession(
         vad=silero.VAD.load(),
         stt=openai.STT(),
-        llm=openai.LLM(),
+        llm=openai.LLM(temperature=0),
         tts=openai.TTS(),
     )
 
