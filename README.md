@@ -6,7 +6,7 @@ An AI-powered mock interview platform that simulates realistic technical and beh
 
 ## The Problem
 
-Interview anxiety suppresses performance. Many strong candidates fail not because they lack knowledge, but because stress interferes at the critical moment. Real confidence doesn't come from one rehearsal — it builds through repeated, guided exposure.
+Interview anxiety suppresses performance. Many strong candidates fail not because they lack knowledge, but because stress interferes at the critical moment.
 
 ---
 
