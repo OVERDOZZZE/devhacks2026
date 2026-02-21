@@ -61,6 +61,7 @@ export default function NewInterview() {
         <div style={{ marginBottom: 16 }}>
           <label>Number of Questions</label><br />
           <select name="number_of_questions" value={form.number_of_questions} onChange={handleChange} style={{ width: '100%', padding: 8 }}>
+            <option value={1}>1</option>
             <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={15}>15</option>

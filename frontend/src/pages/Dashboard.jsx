@@ -9,10 +9,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     client.get('/interviews/')
-      .then(res => {
-        console.log(res.data)
-        setInterviews(res.data)
-      })
+      .then(res => setInterviews(res.data))
       .catch(() => navigate('/login'))
       .finally(() => setLoading(false))
   }, [])
@@ -50,7 +47,7 @@ export default function Dashboard() {
                 {new Date(interview.created_at).toLocaleDateString()}
               </p>
             </div>
-            <div style={{ textAlign: 'right' }}>
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
               {interview.overall_score && (
                 <p style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>
                   {interview.overall_score}/10
@@ -59,6 +56,11 @@ export default function Dashboard() {
               {interview.status === 'completed' && (
                 <button onClick={() => navigate(`/interviews/${interview.id}/results`)}>
                   View Results
+                </button>
+              )}
+              {(interview.status === 'pending' || interview.status === 'in_progress') && (
+                <button onClick={() => navigate(`/interviews/${interview.id}/session`)}>
+                  {interview.status === 'pending' ? 'Start' : 'Resume'}
                 </button>
               )}
             </div>

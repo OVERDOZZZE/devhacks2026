@@ -1,19 +1,26 @@
-import { useEffect, useState } from 'react'
-import { useDataChannel, useLocalParticipant } from '@livekit/components-react'
+import { useState } from 'react'
+import { useDataChannel } from '@livekit/components-react'
 
 export default function InterviewRoom({ interviewId, qaPairs, onComplete }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
-  const [status, setStatus] = useState('waiting') // waiting | listening | done
-  const { localParticipant } = useLocalParticipant()
+  // 'agent_speaking' — agent is reading the question aloud
+  // 'listening'      — candidate should speak their answer
+  // 'done'           — interview complete
+  const [status, setStatus] = useState('agent_speaking')
 
-  // Listen for data messages from the agent
   useDataChannel('interview', (msg) => {
     try {
       const data = JSON.parse(new TextDecoder().decode(msg.payload))
 
       if (data.type === 'question_index') {
         setCurrentIndex(data.index)
+        // Agent is about to speak the question — wait before prompting candidate
+        setStatus('agent_speaking')
+      }
+
+      if (data.type === 'question_asked') {
+        // Agent finished speaking, now candidate should answer
         setStatus('listening')
       }
 
@@ -21,7 +28,6 @@ export default function InterviewRoom({ interviewId, qaPairs, onComplete }) {
         const { qa_id, answer } = data
         setAnswers(prev => {
           const updated = { ...prev, [qa_id]: answer }
-          // Update localStorage
           const stored = JSON.parse(localStorage.getItem(`interview_${interviewId}`) || '{}')
           localStorage.setItem(`interview_${interviewId}`, JSON.stringify({
             ...stored,
@@ -29,6 +35,8 @@ export default function InterviewRoom({ interviewId, qaPairs, onComplete }) {
           }))
           return updated
         })
+        // Go back to agent_speaking while it transitions to the next question
+        setStatus('agent_speaking')
       }
 
       if (data.type === 'interview_complete') {
@@ -50,7 +58,7 @@ export default function InterviewRoom({ interviewId, qaPairs, onComplete }) {
 
       <h2>{currentQA?.question?.text}</h2>
 
-      {status === 'waiting' && (
+      {status === 'agent_speaking' && (
         <p style={{ color: '#888' }}>🔊 Listen to the question...</p>
       )}
 
