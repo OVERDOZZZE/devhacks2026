@@ -7,12 +7,14 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 APPS = [
     "src.user.apps.UserConfig",
     "src.interview.apps.InterviewConfig",
+    "src.livekit.apps.LivekitConfig"
 ]
 INSTALLED_LIBRARIES = [
     "rest_framework",
     "rest_framework.authtoken",
     "drf_yasg",
     "cloudinary",
+    "corsheaders",
 ]
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -26,6 +28,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -116,3 +119,9 @@ cloudinary.config(
 
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+
+
+# Livekit
+LIVEKIT_API_KEY = config("LIVEKIT_API_KEY")
+LIVEKIT_API_SECRET = config("LIVEKIT_API_SECRET")
+
