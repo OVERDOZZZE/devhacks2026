@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react' 
 import { useNavigate, useParams } from 'react-router-dom'
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react'
 import client from '../api/client'
@@ -13,6 +13,7 @@ export default function Session() {
   const [qaPairs, setQaPairs] = useState([])
   const [phase, setPhase] = useState('loading')
   const [connected, setConnected] = useState(false)
+  const initialized = useRef(false)
 
   useEffect(() => {
     if (initialized.current) return
