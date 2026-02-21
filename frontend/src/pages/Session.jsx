@@ -15,6 +15,8 @@ export default function Session() {
   const [connected, setConnected] = useState(false)
 
   useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
     const init = async () => {
       try {
         const startRes = await client.post(`/interviews/${id}/start/`)
