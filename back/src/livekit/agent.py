@@ -16,8 +16,6 @@ from livekit.plugins import openai, silero
 
 logger = logging.getLogger("interview-agent")
 
-# All voices supported by OpenAI TTS (tts-1 / tts-1-hd).
-# If the value coming from the DB is unrecognised we fall back to "alloy".
 VALID_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
 
 
@@ -25,17 +23,17 @@ class InterviewAgent(Agent):
     def __init__(self, questions, room):
         super().__init__(
             instructions=(
-                "You are a professional interview assistant. "
-                "You will be given explicit instructions for each action to take. "
-                "Only do exactly what you are instructed — do not ask follow-up questions, "
-                "do not continue the conversation on your own, and do not speak unless instructed."
+                "You are a professional interview assistant conducting a structured interview. "
+                "The interview questions are pre-written and will be provided to you explicitly. "
+                "NEVER generate your own questions. NEVER deviate from explicit instructions. "
+                "Only speak when instructed, say exactly what is instructed, nothing more."
             )
         )
         self.questions = questions
         self.answers   = {}
         self.room      = room
 
-    async def _wait_for_answer(self, message_count_before: int) -> str:
+    async def _wait_for_answer(self, message_count_before: int, min_wait: float = 5.0) -> str:
         answer_event = asyncio.Event()
         captured = {"text": ""}
 
@@ -47,7 +45,10 @@ class InterviewAgent(Agent):
         self.session.on("user_input_transcribed", on_transcript)
 
         try:
-            await asyncio.wait_for(answer_event.wait(), timeout=60.0)
+            await asyncio.gather(
+                asyncio.sleep(min_wait),
+                asyncio.wait_for(answer_event.wait(), timeout=60.0),
+            )
         except asyncio.TimeoutError:
             pass
         finally:
@@ -62,7 +63,7 @@ class InterviewAgent(Agent):
             captured["text"] = new_user_messages[-1].content if new_user_messages else ""
 
         return captured["text"]
-
+    
     async def on_enter(self):
         await asyncio.sleep(1)
 
@@ -77,7 +78,6 @@ class InterviewAgent(Agent):
 
             message_count_before = len(self.session.history.messages())
 
-            # Speak the exact question text — no LLM rephrasing
             await self.session.say(question_text, allow_interruptions=False)
 
             await self.room.local_participant.publish_data(
@@ -96,19 +96,9 @@ class InterviewAgent(Agent):
             is_last = i == len(self.questions) - 1
 
             if not is_last:
-                await self.session.generate_reply(
-                    instructions=(
-                        "Give ONLY one sentence of feedback on their answer. "
-                        "Then say exactly: 'Moving to the next question.' Nothing else."
-                    )
-                )
+                await self.session.say("Thank you. Moving to the next question.", allow_interruptions=False)
             else:
-                await self.session.generate_reply(
-                    instructions=(
-                        "Give ONLY one sentence of feedback on their final answer. "
-                        "Then say exactly: 'Thank you, the interview is now complete.' Nothing else."
-                    )
-                )
+                await self.session.say("Thank you. The interview is now complete.", allow_interruptions=False)
                 await asyncio.sleep(3)
                 await self.room.local_participant.publish_data(
                     json.dumps({
@@ -118,14 +108,9 @@ class InterviewAgent(Agent):
                     topic="interview",
                 )
 
-
 async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-    # ------------------------------------------------------------------ #
-    # Room metadata structure (set by obtain_token.py):                   #
-    #   { "questions": [...], "voice": "nova" }                           #
-    # ------------------------------------------------------------------ #
     raw_metadata = ctx.room.metadata or "{}"
     try:
         metadata = json.loads(raw_metadata)
@@ -140,7 +125,6 @@ async def entrypoint(ctx: JobContext):
         logger.warning("No questions found in room metadata — aborting.")
         return
 
-    # Guard against invalid / misspelled voice names
     if voice not in VALID_VOICES:
         logger.warning("Unknown TTS voice %r — falling back to 'alloy'.", voice)
         voice = "alloy"
@@ -153,7 +137,9 @@ async def entrypoint(ctx: JobContext):
         vad=silero.VAD.load(),
         stt=openai.STT(),
         llm=openai.LLM(temperature=0),
-        tts=openai.TTS(voice=voice),   # ← voice is applied here
+        tts=openai.TTS(voice=voice),
+        # Disable automatic replies — we drive everything manually in on_enter
+        allow_interruptions=False,
     )
 
     await session.start(
@@ -165,3 +151,4 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    
