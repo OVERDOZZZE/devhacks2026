@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .cv_views import CVAnalysisView
 
 
 urlpatterns = [
@@ -10,4 +11,6 @@ urlpatterns = [
 
     path('interviews/<int:pk>/start/', views.InterviewStartView.as_view(), name='interview-start'),
     path('interviews/<int:pk>/complete/', views.InterviewCompleteView.as_view(), name='interview-complete'),
+
+    path('cv/analyse/', CVAnalysisView.as_view(), name='cv-analyse'),
 ]
