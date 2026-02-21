@@ -11,6 +11,7 @@ export default function Session() {
   const navigate = useNavigate()
   const [token, setToken] = useState(null)
   const [qaPairs, setQaPairs] = useState([])
+  const [interviewMeta, setInterviewMeta] = useState({ jobDescription: '', roleTitle: '', companyName: '' })
   const [phase, setPhase] = useState('loading')
   const [connected, setConnected] = useState(false)
   const initialized = useRef(false)
@@ -21,8 +22,14 @@ export default function Session() {
     const init = async () => {
       try {
         const startRes = await client.post(`/interviews/${id}/start/`)
-        const qa_pairs = startRes.data.qa_pairs
+        const data = startRes.data
+        const qa_pairs = data.qa_pairs || []
         setQaPairs(qa_pairs)
+        setInterviewMeta({
+          jobDescription: data.job_description || '',
+          roleTitle: data.job_description ? data.job_description.slice(0, 50).trim() + (data.job_description.length > 50 ? '…' : '') : 'Interview',
+          companyName: data.company_name || '',
+        })
 
         localStorage.setItem(`interview_${id}`, JSON.stringify({
           qa_pairs,
@@ -69,7 +76,17 @@ export default function Session() {
     >
       <RoomAudioRenderer />
       {connected
-        ? <InterviewRoom interviewId={id} qaPairs={qaPairs} onComplete={handleInterviewComplete} />
+        ? (
+            <InterviewRoom
+              interviewId={id}
+              qaPairs={qaPairs}
+              onComplete={handleInterviewComplete}
+              onEndSession={() => window.confirm('End session and return to dashboard?') && navigate('/dashboard')}
+              jobDescription={interviewMeta.jobDescription}
+              roleTitle={interviewMeta.roleTitle}
+              companyName={interviewMeta.companyName}
+            />
+          )
         : <p style={{ textAlign: 'center', marginTop: 100 }}>Connecting to interview room...</p>
       }
     </LiveKitRoom>
