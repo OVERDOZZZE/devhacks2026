@@ -134,3 +134,6 @@ OPEN_ROUTER_ENDPOINT = config("OPEN_ROUTER_ENDPOINT")
 SITE_URL = config("SITE_URL")
 SITE_NAME = config("SITE_NAME")
 
+# Gemini
+GEMINI_API_KEY = config("GEMINI_API_KEY")
+GEMINI_LLM_MODEL = config("GEMINI_LLM_MODEL", default="gemini-2.0-flash")
