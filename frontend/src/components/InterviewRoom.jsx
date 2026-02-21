@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useDataChannel } from '@livekit/components-react'
 
 const bodyFont = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
@@ -15,11 +15,32 @@ export default function InterviewRoom({
 }) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
-  const [scores, setScores] = useState({}) // qa_id -> score if we get it later
+  const [scores, setScores] = useState({})
   const [status, setStatus] = useState('agent_speaking')
-  const [sessionStartMs, setSessionStartMs] = useState(() => Date.now())
+  const [sessionStartMs] = useState(() => Date.now())
   const [elapsedSec, setElapsedSec] = useState(0)
   const [notes, setNotes] = useState('')
+  const [camError, setCamError] = useState(false)
+  const videoRef = useRef(null)
+
+  // Webcam init
+  useEffect(() => {
+    let stream = null
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then((s) => {
+        stream = s
+        if (videoRef.current) {
+          videoRef.current.srcObject = s
+        }
+      })
+      .catch((err) => {
+        console.warn('Camera access denied or unavailable:', err)
+        setCamError(true)
+      })
+    return () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop())
+    }
+  }, [])
 
   useEffect(() => {
     const stored = localStorage.getItem(`interview_${interviewId}_notes`)
@@ -27,7 +48,6 @@ export default function InterviewRoom({
   }, [interviewId])
 
   useEffect(() => {
-    if (!sessionStartMs) return
     const t = setInterval(() => setElapsedSec(Math.floor((Date.now() - sessionStartMs) / 1000)), 1000)
     return () => clearInterval(t)
   }, [sessionStartMs])
@@ -82,9 +102,10 @@ export default function InterviewRoom({
     const sec = s % 60
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
   }
-
   const isAnswered = (qa) => qa && answers[qa.id] != null
   const recommendedMin = total ? Math.max(1, Math.ceil(total * 4)) : 0
+
+  const isListening = status === 'listening'
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: bodyFont }}>
@@ -144,11 +165,20 @@ export default function InterviewRoom({
           )}
         </div>
       </header>
+
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes agent-speak-bar {
           0%, 100% { transform: scaleY(0.4); }
           50% { transform: scaleY(1); }
+        }
+        @keyframes cam-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6), 0 8px 32px rgba(0,0,0,0.4); }
+          50% { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2), 0 8px 32px rgba(0,0,0,0.4); }
+        }
+        @media (max-width: 900px) {
+          .interview-room-grid { grid-template-columns: 1fr !important; }
+          .webcam-pip { width: 180px !important; height: 135px !important; bottom: 16px !important; right: 16px !important; }
         }
       `}</style>
 
@@ -170,13 +200,7 @@ export default function InterviewRoom({
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 8, letterSpacing: '0.5px' }}>PROGRESS</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                flex: 1,
-                height: 8,
-                background: '#e2e8f0',
-                borderRadius: 999,
-                overflow: 'hidden',
-              }}>
+              <div style={{ flex: 1, height: 8, background: '#e2e8f0', borderRadius: 999, overflow: 'hidden' }}>
                 <div style={{
                   width: `${progressPct}%`,
                   height: '100%',
@@ -214,13 +238,7 @@ export default function InterviewRoom({
               </div>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b', letterSpacing: '0.5px' }}>CURRENT QUESTION</span>
             </div>
-            <p style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 600,
-              color: '#0f172a',
-              lineHeight: 1.4,
-            }}>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#0f172a', lineHeight: 1.4 }}>
               {currentQA?.question?.text || '—'}
             </p>
           </div>
@@ -240,28 +258,18 @@ export default function InterviewRoom({
               {status === 'done' && 'Interview complete'}
             </p>
             {status === 'agent_speaking' && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                marginBottom: 16,
-                height: 32,
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16, height: 32 }}>
                 <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>AI is speaking</span>
                 {[0, 1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 5,
-                      height: 24,
-                      background: '#0f172a',
-                      borderRadius: 3,
-                      transformOrigin: 'center bottom',
-                      animation: 'agent-speak-bar 0.8s ease-in-out infinite',
-                      animationDelay: `${i * 0.12}s`,
-                    }}
-                  />
+                  <div key={i} style={{
+                    width: 5,
+                    height: 24,
+                    background: '#0f172a',
+                    borderRadius: 3,
+                    transformOrigin: 'center bottom',
+                    animation: 'agent-speak-bar 0.8s ease-in-out infinite',
+                    animationDelay: `${i * 0.12}s`,
+                  }} />
                 ))}
               </div>
             )}
@@ -270,12 +278,11 @@ export default function InterviewRoom({
               height: 72,
               margin: '0 auto 12px',
               borderRadius: '50%',
-              background: status === 'listening' ? '#0f172a' : '#334155',
+              background: isListening ? '#0f172a' : '#334155',
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'default',
             }}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
@@ -283,7 +290,7 @@ export default function InterviewRoom({
                 <line x1="12" y1="19" x2="12" y2="22" />
               </svg>
             </div>
-            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>Hold Space or click the mic to toggle</p>
+            <p style={{ margin: 0, fontSize: 13, color: '#94a3b8' }}>Your microphone is active. The AI interviewer will guide you.</p>
           </div>
         </div>
 
@@ -319,35 +326,28 @@ export default function InterviewRoom({
                 const isCurrent = i === currentIndex
                 const answered = isAnswered(qa)
                 const score = qa && scores[qa.id]
-                const shortText = qa?.question?.text ? (qa.question.text.slice(0, 42) + (qa.question.text.length > 42 ? '…' : '')) : `Question ${i + 1}`
+                const shortText = qa?.question?.text
+                  ? (qa.question.text.slice(0, 42) + (qa.question.text.length > 42 ? '…' : ''))
+                  : `Question ${i + 1}`
                 return (
-                  <div
-                    key={qa?.id ?? i}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: '8px 10px',
-                      borderRadius: 8,
-                      background: isCurrent ? '#0f172a' : 'transparent',
-                      color: isCurrent ? '#fff' : '#0f172a',
-                    }}
-                  >
+                  <div key={qa?.id ?? i} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    background: isCurrent ? '#0f172a' : 'transparent',
+                    color: isCurrent ? '#fff' : '#0f172a',
+                  }}>
                     {answered ? (
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M20 6L9 17l-5-5" /></svg>
                     ) : (
                       <div style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
+                        width: 22, height: 22, borderRadius: '50%',
                         background: isCurrent ? 'rgba(255,255,255,0.2)' : '#e2e8f0',
                         color: isCurrent ? '#fff' : '#64748b',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
+                        fontSize: 11, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       }}>
                         {i + 1}
                       </div>
@@ -391,12 +391,86 @@ export default function InterviewRoom({
         </div>
       </div>
 
-      {/* Responsive: stack on narrow */}
-      <style>{`
-        @media (max-width: 900px) {
-          .interview-room-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+      {/* ── Webcam PiP ── */}
+      <div
+        className="webcam-pip"
+        style={{
+          position: 'fixed',
+          bottom: 28,
+          right: 28,
+          width: 260,
+          height: 195,
+          borderRadius: 14,
+          overflow: 'hidden',
+          background: '#0f172a',
+          zIndex: 200,
+          animation: isListening ? 'cam-glow 1.5s ease-in-out infinite' : 'none',
+          boxShadow: isListening
+            ? '0 0 0 2px #dc2626, 0 8px 32px rgba(0,0,0,0.45)'
+            : '0 8px 32px rgba(0,0,0,0.35)',
+          transition: 'box-shadow 0.3s ease',
+        }}
+      >
+        {camError ? (
+          <div style={{
+            width: '100%', height: '100%',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 8, color: '#64748b',
+          }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M15.6 11.6L22 7v10l-6.4-4.5v-1zM2 7h13v10H2z" />
+              <line x1="1" y1="1" x2="23" y2="23" stroke="#dc2626" strokeWidth="2" />
+            </svg>
+            <span style={{ fontSize: 11, textAlign: 'center', padding: '0 16px', lineHeight: 1.4 }}>Camera unavailable</span>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transform: 'scaleX(-1)',  // mirror like a selfie cam
+            }}
+          />
+        )}
+
+        {/* Status label at bottom */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '18px 10px 8px',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>You</span>
+          {isListening && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 10,
+              fontWeight: 700,
+              color: '#fff',
+              background: '#dc2626',
+              padding: '2px 7px',
+              borderRadius: 999,
+              letterSpacing: '0.5px',
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              REC
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
